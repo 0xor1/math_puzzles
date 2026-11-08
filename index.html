@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mental Agility Puzzle Generator</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .controls {
+            margin-bottom: 25px;
+        }
+
+        button {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #b71c1c;
+        }
+
+        .section-title {
+            font-weight: bold;
+            font-size: 18px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: #333;
+            letter-spacing: 1px;
+        }
+
+        .puzzle-container {
+            width: 100%;
+            max-width: 1100px;
+            background: white;
+            padding: 15px;
+            border: 2px solid #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        table.grid {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        table.grid td {
+            border: 1px solid #333;
+            height: 75px;
+            text-align: center;
+            vertical-align: middle;
+            position: relative;
+            font-weight: bold;
+            font-size: 15px;
+            padding: 4px;
+            word-wrap: break-word;
+        }
+
+        .header-cell {
+            background-color: #d32f2f;
+            color: white;
+            font-size: 12px;
+            text-transform: uppercase;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 2px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .cell-content {
+            margin-top: 12px;
+            white-space: pre-line;
+            line-height: 1.2;
+        }
+
+        .start-cell .cell-content {
+            font-size: 22px;
+            margin-top: 10px;
+        }
+
+        .answer-cell {
+            background-color: #fafafa;
+        }
+
+        .solution-cell {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button onclick="generatePuzzles()">Generate New Puzzles</button>
+    </div>
+
+    <div class="section-title">Puzzles</div>
+    <div class="puzzle-container">
+        <table class="grid" id="puzzles-table"></table>
+    </div>
+
+    <div class="section-title">Solutions</div>
+    <div class="puzzle-container">
+        <table class="grid" id="solutions-table"></table>
+    </div>
+
+    <script>
+        class IntegerPuzzleGenerator {
+            static generate(steps, maxValue = 1000) {
+                if (steps <= 0) throw new Error("Steps must be > 0");
+                if (maxValue < 100) throw new Error("maxValue must be >= 100");
+
+                let puzzle = {
+                    start: "",
+                    problem: [],
+                    solution: []
+                };
+
+                let currentValue = Math.floor(Math.random() * (maxValue - 1)) + 1;
+                puzzle.start = currentValue.toString();
+
+                let lowerBound = Math.floor(maxValue / 3);
+                let upperBound = Math.floor((maxValue * 2) / 3);
+
+                for (let i = 0; i < steps; i++) {
+                    let stepAdded = false;
+                    let allowedOps;
+
+                    if (currentValue < lowerBound) {
+                        allowedOps = [0, 1, 2, 8, 10]; // Growth ops
+                    } else if (currentValue > upperBound) {
+                        allowedOps = [0, 1, 3, 4, 5, 6, 7]; // Reduction ops
+                    } else {
+                        allowedOps = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11]; // All ops
+                    }
+
+                    for (let attempt = 0; attempt < 20; attempt++) {
+                        let opType = allowedOps[Math.floor(Math.random() * allowedOps.length)];
+
+                        switch (opType) {
+                            case 0: stepAdded = this.tryAddition(currentValue, maxValue, puzzle); break;
+                            case 1: stepAdded = this.trySubtraction(currentValue, puzzle); break;
+                            case 2: stepAdded = this.tryMultiplication(currentValue, maxValue, puzzle); break;
+                            case 3: stepAdded = this.tryDivision(currentValue, puzzle); break;
+                            case 4: stepAdded = this.tryPercentageOfThis(currentValue, maxValue, puzzle); break;
+                            case 5: stepAdded = this.tryFractionOfThis(currentValue, maxValue, puzzle); break;
+                            case 6: stepAdded = this.trySquareRoot(currentValue, puzzle); break;
+                            case 7: stepAdded = this.tryCubeRoot(currentValue, puzzle); break;
+                            case 8: stepAdded = this.tryExponent(currentValue, maxValue, puzzle); break;
+                            case 10: stepAdded = this.tryPercentageIncrease(currentValue, maxValue, puzzle); break;
+                            case 11: stepAdded = this.tryReverseDigits(currentValue, maxValue, puzzle); break;
+                        }
+
+                        if (stepAdded) {
+                            currentValue = parseInt(puzzle.solution[puzzle.solution.length - 1], 10);
+                            break;
+                        }
+                    }
+
+                    // Fallback
+                    if (!stepAdded) {
+                        if (currentValue < maxValue - 1) {
+                            let maxAdd = Math.min(10, maxValue - currentValue);
+                            let add = Math.floor(Math.random() * maxAdd) + 1;
+                            currentValue += add;
+                            puzzle.problem.push(`+${add}`);
+                            puzzle.solution.push(currentValue.toString());
+                        } else {
+                            let maxSub = Math.min(10, currentValue);
+                            let sub = Math.floor(Math.random() * maxSub) + 1;
+                            currentValue -= sub;
+                            puzzle.problem.push(`-${sub}`);
+                            puzzle.solution.push(currentValue.toString());
+                        }
+                    }
+                }
+
+                return puzzle;
+            }
+
+            static tryAddition(val, max, p) {
+                if (val >= max) return false;
+                let maxAdd = Math.min(max - val, Math.max(1, Math.floor(max / 2)));
+                if (maxAdd < 1) return false;
+                let add = Math.floor(Math.random() * maxAdd) + 1;
+                p.problem.push(`+${add}`);
+                p.solution.push((val + add).toString());
+                return true;
+            }
+
+            static trySubtraction(val, p) {
+                if (val <= 1) return false;
+                let sub = Math.floor(Math.random() * (val - 1)) + 1;
+                p.problem.push(`-${sub}`);
+                p.solution.push((val - sub).toString());
+                return true;
+            }
+
+            static tryMultiplication(val, max, p) {
+                let maxFactor = Math.floor(max / val);
+                if (maxFactor < 2) return false;
+                let cappedMax = Math.min(maxFactor, 12);
+                if (cappedMax < 2) return false;
+                let factor = Math.floor(Math.random() * (cappedMax - 1)) + 2;
+                p.problem.push(`x${factor}`);
+                p.solution.push((val * factor).toString());
+                return true;
+            }
+
+            static tryDivision(val, p) {
+                let divisors = this.getProperDivisors(val);
+                if (divisors.length === 0) return false;
+                let divisor = divisors[Math.floor(Math.random() * divisors.length)];
+                p.problem.push(`÷${divisor}`);
+                p.solution.push((val / divisor).toString());
+                return true;
+            }
+
+            static tryPercentageOfThis(val, max, p) {
+                let choices = [10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90];
+                let valid = choices.filter(pct => (val * pct) % 100 === 0 && ((val * pct) / 100) !== val);
+                if (valid.length === 0) return false;
+                let pct = valid[Math.floor(Math.random() * valid.length)];
+                p.problem.push(`${pct}%\nof this`);
+                p.solution.push(((val * pct) / 100).toString());
+                return true;
+            }
+
+            static tryPercentageIncrease(val, max, p) {
+                let choices = [10, 20, 25, 30, 40, 50, 75, 100];
+                let valid = choices.filter(pct => (val * pct) % 100 === 0 && (val + (val * pct) / 100) <= max);
+                if (valid.length === 0) return false;
+                let pct = valid[Math.floor(Math.random() * valid.length)];
+                p.problem.push(`Increase by\n${pct}%`);
+                p.solution.push((val + (val * pct) / 100).toString());
+                return true;
+            }
+
+            static tryFractionOfThis(val, max, p) {
+                let candidates = [
+                    [1, 2], [1, 3], [2, 3], [1, 4], [3, 4],
+                    [1, 5], [2, 5], [3, 5], [4, 5], [5, 6],
+                    [1, 7], [5, 7], [7, 9]
+                ];
+                let valid = candidates.filter(([n, d]) => (val * n) % d === 0 && ((val * n) / d) !== val);
+                if (valid.length === 0) return false;
+                let [num, den] = valid[Math.floor(Math.random() * valid.length)];
+                p.problem.push(`${num}/${den}\nof this`);
+                p.solution.push(((val * num) / den).toString());
+                return true;
+            }
+
+            static trySquareRoot(val, p) {
+                if (val <= 1) return false;
+                let root = Math.round(Math.sqrt(val));
+                if (root * root === val && root > 1) {
+                    p.problem.push("Take the\nsquare root");
+                    p.solution.push(root.toString());
+                    return true;
+                }
+                return false;
+            }
+
+            static tryCubeRoot(val, p) {
+                if (val <= 1) return false;
+                let root = Math.round(Math.cbrt(val));
+                if (root * root * root === val && root > 1) {
+                    p.problem.push("Take the\ncube root");
+                    p.solution.push(root.toString());
+                    return true;
+                }
+                return false;
+            }
+
+            static tryExponent(val, max, p) {
+                if (val <= 1) return false;
+                let valid = [];
+                for (let exp = 2; exp <= 5; exp++) {
+                    if (Math.pow(val, exp) <= max) valid.push(exp);
+                    else break;
+                }
+                if (valid.length === 0) return false;
+                let exp = valid[Math.floor(Math.random() * valid.length)];
+                let labels = { 2: "Square it", 3: "Cube it", 4: "x⁴", 5: "x⁵" };
+                p.problem.push(labels[exp]);
+                p.solution.push(Math.pow(val, exp).toString());
+                return true;
+            }
+
+            static tryReverseDigits(val, max, p) {
+                if (val < 10 || val % 10 === 0) return false;
+                let rev = parseInt(val.toString().split('').reverse().join(''), 10);
+                if (rev === val || rev > max) return false;
+                p.problem.push("Reverse\nthe digits");
+                p.solution.push(rev.toString());
+                return true;
+            }
+
+            static getProperDivisors(n) {
+                let div = [];
+                let limit = Math.floor(Math.sqrt(n));
+                for (let i = 2; i <= limit; i++) {
+                    if (n % i === 0) {
+                        div.push(i);
+                        let comp = n / i;
+                        if (comp !== i) div.push(comp);
+                    }
+                }
+                return div;
+            }
+        }
+
+        function buildRowHtml(label, puzzle, isSolution = false) {
+            let html = `<tr>`;
+            html += `<td class="start-cell">
+                        <div class="header-cell">${label}</div>
+                        <div class="cell-content">${puzzle.start}</div>
+                     </td>`;
+
+            for (let i = 0; i < puzzle.problem.length; i++) {
+                if (isSolution) {
+                    html += `<td class="solution-cell">
+                                <div class="cell-content">${puzzle.solution[i]}</div>
+                             </td>`;
+                } else {
+                    html += `<td>
+                                <div class="cell-content">${puzzle.problem[i]}</div>
+                             </td>`;
+                }
+            }
+
+            html += `<td class="answer-cell">
+                        <div class="header-cell">ANSWER</div>
+                        <div class="cell-content">${isSolution ? puzzle.solution[puzzle.solution.length - 1] : ''}</div>
+                     </td>`;
+            html += `</tr>`;
+            return html;
+        }
+
+        function generatePuzzles() {
+            const beginner = IntegerPuzzleGenerator.generate(8, 100);
+            const intermediate = IntegerPuzzleGenerator.generate(8, 1000);
+            const advanced = IntegerPuzzleGenerator.generate(8, 10000);
+
+            // Populate Puzzles Table
+            let puzzleHtml = "";
+            puzzleHtml += buildRowHtml("BEGINNER", beginner, false);
+            puzzleHtml += buildRowHtml("INTERMEDIATE", intermediate, false);
+            puzzleHtml += buildRowHtml("ADVANCED", advanced, false);
+            document.getElementById("puzzles-table").innerHTML = puzzleHtml;
+
+            // Populate Solutions Table
+            let solutionHtml = "";
+            solutionHtml += buildRowHtml("BEGINNER", beginner, true);
+            solutionHtml += buildRowHtml("INTERMEDIATE", intermediate, true);
+            solutionHtml += buildRowHtml("ADVANCED", advanced, true);
+            document.getElementById("solutions-table").innerHTML = solutionHtml;
+        }
+
+        // Generate initial puzzle set on page load
+        window.onload = generatePuzzles;
+    </script>
+</body>
+</html>
